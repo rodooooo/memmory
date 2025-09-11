@@ -420,7 +420,7 @@ public class Kernel extends Thread
       }
       catch ( IOException e ) 
       {
-        /* Do nothing */
+        /* Do nothing */ 
       }
     }
     try 
@@ -482,6 +482,7 @@ public class Kernel extends Thread
         currentSegment = segStart;
       }
     }
+
     if (errorSegment) {
       controlPanel.pageFaultValueLabel.setText("ERROR SEGMENTO");
       if (controlPanel.segmentLabel != null) controlPanel.segmentLabel.setText("Error: Dirección fuera de segmento");
@@ -489,9 +490,48 @@ public class Kernel extends Thread
       return;
     } else {
       if (controlPanel.segmentLabel != null) controlPanel.segmentLabel.setText("S" + (currentSegment+1));
-      controlPanel.pageFaultValueLabel.setText("NO");
+      // pageFault label will be updated per-page below
     }
-    getPage(pageStart);
+
+    // Delegar manejo de page-faults y actualización de bits R/M a PageFault/MemoryManagement
+    if (instruct.isRange()) {
+      for (int p = pageStart; p <= pageEnd; p++) {
+        Page page = (Page) memVector.elementAt(p);
+        if (page.physical == -1) {
+          // delega al algoritmo de reemplazo en PageFault
+          PageFault.replacePage(memVector, virtPageNum, p, controlPanel);
+          controlPanel.pageFaultValueLabel.setText("YES");
+        } else {
+          controlPanel.pageFaultValueLabel.setText("NO");
+        }
+        // marcar R siempre
+        page.R = 1;
+        // marcar M si es WRITE
+        if ("WRITE".equals(instruct.inst)) {
+          page.M = 1;
+        }
+        // actualizar timestamps
+        page.lastTouchTime = runs * 10;
+      }
+      // pintar la primera página del rango
+      getPage(pageStart);
+    } else {
+      Page page = (Page) memVector.elementAt(pageStart);
+      if (page.physical == -1) {
+        PageFault.replacePage(memVector, virtPageNum, pageStart, controlPanel);
+        controlPanel.pageFaultValueLabel.setText("YES");
+      } else {
+        controlPanel.pageFaultValueLabel.setText("NO");
+      }
+      // marcar R y M según instrucción
+      page.R = 1;
+      if ("WRITE".equals(instruct.inst)) {
+        page.M = 1;
+      }
+      page.lastTouchTime = runs * 10;
+      getPage(pageStart);
+    }
+
     runs++;
     controlPanel.timeValueLabel.setText( Integer.toString( runs*10 ) + " (ns)" );
   }
@@ -515,4 +555,5 @@ public class Kernel extends Thread
     if (controlPanel.segmentLabel != null) controlPanel.segmentLabel.setText("");
     init( command_file , config_file );
   }
+
 }
