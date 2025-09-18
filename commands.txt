@@ -1,0 +1,5 @@
+READ hex ffff
+READ hex 13fff
+READ hex bfff
+READ hex 1ffff
+READ hex 27fff

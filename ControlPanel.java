@@ -1,138 +1,181 @@
 import java.applet.*;
 import java.awt.*;
+import java.util.*;
 
 public class ControlPanel extends Frame {
-    private Kernel kernel;
+    Kernel kernel;
+
+    // Control buttons
+    Button runButton = new Button("run");
+    Button stepButton = new Button("step");
+    Button resetButton = new Button("reset");
+    Button exitButton = new Button("exit");
+
     private static final int PAGE_COUNT = 64;
-
-    Button runButton, stepButton, resetButton, exitButton;
     Button[] pageButtons = new Button[PAGE_COUNT];
-
-    Label statusValueLabel;
-    Label timeValueLabel;
-    Label instructionValueLabel;
-    Label addressValueLabel;
-    Label pageFaultValueLabel;
-    Label virtualPageValueLabel;
-    Label physicalPageValueLabel;
-    Label RValueLabel;
-    Label MValueLabel;
-    Label inMemTimeValueLabel;
-    Label lastTouchTimeValueLabel;
-    Label lowValueLabel;
-    Label highValueLabel;
-
-    Label segmentLabel;
-    Label pageInputValueLabel;
-    Label pagesLabel; // para setPagesInvolved
-
     Label[] physicalLabels = new Label[PAGE_COUNT];
 
-    public ControlPanel() {
-        this("");
-    }
+    // State labels
+    Label statusValueLabel = new Label("STOP", Label.LEFT);
+    Label timeValueLabel = new Label("0", Label.LEFT);
+    Label instructionValueLabel = new Label("NONE", Label.LEFT);
+    Label addressValueLabel = new Label("NULL", Label.LEFT);
+    Label pageFaultValueLabel = new Label("NO", Label.LEFT);
+    Label virtualPageValueLabel = new Label("x", Label.LEFT);
+    Label physicalPageValueLabel = new Label("0", Label.LEFT);
+    Label RValueLabel = new Label("0", Label.LEFT);
+    Label MValueLabel = new Label("0", Label.LEFT);
+    Label inMemTimeValueLabel = new Label("0", Label.LEFT);
+    Label lastTouchTimeValueLabel = new Label("0", Label.LEFT);
+    Label lowValueLabel = new Label("0", Label.LEFT);
+    Label highValueLabel = new Label("0", Label.LEFT);
 
-    public ControlPanel(String title) {
-        super(title);
+    Label segmentLabel = new Label("", Label.LEFT);
+    TextArea pageInSegmentArea = new TextArea("", 6, 15, TextArea.SCROLLBARS_NONE);
+
+    public ControlPanel() { super(); }
+    public ControlPanel(String title) { super(title); }
+
+    public void init(Kernel useKernel, String commands, String config) {
+        kernel = useKernel;
+        kernel.setControlPanel(this);
+
         setLayout(null);
         setBackground(Color.white);
         setForeground(Color.black);
-        setFont(new Font("Courier", Font.PLAIN, 12));
-        setSize(760, 640);
-        initUI();
-    }
+        resize(635, 545);
+        setFont(new Font("Courier", 0, 12));
 
-    private void initUI() {
-        runButton = makeButton("run", 10, 10, 70, 20, Color.blue, Color.lightGray);
-        stepButton = makeButton("step", 90, 10, 70, 20, Color.blue, Color.lightGray);
-        resetButton = makeButton("reset", 170, 10, 70, 20, Color.blue, Color.lightGray);
-        exitButton = makeButton("exit", 250, 10, 70, 20, Color.blue, Color.lightGray);
+        configureControlButton(runButton, 0, 25);
+        configureControlButton(stepButton, 70, 25);
+        configureControlButton(resetButton, 140, 25);
+        configureControlButton(exitButton, 210, 25);
 
-        int colX[] = {10, 140};
+        int colX[] = {0, 140};
         for (int i = 0; i < PAGE_COUNT; i++) {
             int col = (i < 32) ? 0 : 1;
             int row = (i % 32);
             Button b = new Button("page " + i);
-            b.setBounds(colX[col], (row + 2) * 15 + 25, 70, 15);
             b.setForeground(Color.magenta);
             b.setBackground(Color.lightGray);
-            add(b);
+            b.setBounds(colX[col], (row + 2) * 15 + 25, 70, 15);
             pageButtons[i] = b;
+            add(b);
         }
 
         for (int i = 0; i < PAGE_COUNT; i++) {
+            int x = (i < 32) ? 70 : 210;
+            int row = (i % 32);
             Label l = new Label("", Label.CENTER);
-            if (i < 32) {
-                l.setBounds(75, (i + 2) * 15 + 25, 60, 15);
-            } else {
-                l.setBounds(205, ((i - 32) + 2) * 15 + 25, 60, 15);
-            }
             l.setForeground(Color.red);
             l.setFont(new Font("Courier", Font.PLAIN, 10));
-            add(l);
+            l.setBounds(x, (row + 2) * 15 + 25, 60, 15);
             physicalLabels[i] = l;
+            add(l);
         }
 
-        statusValueLabel = makeLabel("STOP", 400, 10, 140, 15);
-        timeValueLabel = makeLabel("0", 400, 30, 140, 15);
-        instructionValueLabel = makeLabel("NONE", 400, 60, 230, 15);
-        addressValueLabel = makeLabel("NULL", 400, 80, 230, 15);
-        pageFaultValueLabel = makeLabel("NO", 400, 110, 140, 15);
-        virtualPageValueLabel = makeLabel("x", 400, 130, 230, 15);
-        physicalPageValueLabel = makeLabel("0", 400, 150, 230, 15);
-        RValueLabel = makeLabel("0", 400, 170, 230, 15);
-        MValueLabel = makeLabel("0", 400, 190, 230, 15);
-        inMemTimeValueLabel = makeLabel("0", 400, 210, 230, 15);
-        lastTouchTimeValueLabel = makeLabel("0", 400, 230, 230, 15);
-        lowValueLabel = makeLabel("0", 400, 250, 230, 15);
-        highValueLabel = makeLabel("0", 400, 270, 230, 15);
+        statusValueLabel.setBounds(345, 0 + 25, 100, 15);
+        add(statusValueLabel);
 
-        segmentLabel = makeLabel("", 400, 295, 230, 18);
+        timeValueLabel.setBounds(345, 15 + 25, 100, 15);
+        add(timeValueLabel);
+
+        instructionValueLabel.setBounds(385, 45 + 25, 100, 15);
+        add(instructionValueLabel);
+
+        addressValueLabel.setBounds(385, 60 + 25, 230, 15);
+        add(addressValueLabel);
+
+        pageFaultValueLabel.setBounds(385, 90 + 25, 100, 15);
+        add(pageFaultValueLabel);
+
+        virtualPageValueLabel.setBounds(395, 120 + 25, 200, 15);
+        add(virtualPageValueLabel);
+
+        physicalPageValueLabel.setBounds(395, 135 + 25, 200, 15);
+        add(physicalPageValueLabel);
+
+        RValueLabel.setBounds(395, 150 + 25, 200, 15);
+        add(RValueLabel);
+
+        MValueLabel.setBounds(395, 165 + 25, 200, 15);
+        add(MValueLabel);
+
+        inMemTimeValueLabel.setBounds(395, 180 + 25, 200, 15);
+        add(inMemTimeValueLabel);
+
+        lastTouchTimeValueLabel.setBounds(395, 195 + 25, 200, 15);
+        add(lastTouchTimeValueLabel);
+
+        lowValueLabel.setBounds(395, 210 + 25, 230, 15);
+        add(lowValueLabel);
+
+        highValueLabel.setBounds(395, 225 + 25, 230, 15);
+        add(highValueLabel);
+
+        addFixedLabel("status:", 285, 0 + 25, 65, 15);
+        addFixedLabel("time:", 285, 15 + 25, 50, 15);
+        addFixedLabel("instruction:", 285, 45 + 25, 100, 15);
+        addFixedLabel("address:", 285, 60 + 25, 85, 15);
+        addFixedLabel("page fault:", 285, 90 + 25, 100, 15);
+        addFixedLabel("virtual page:", 285, 120 + 25, 110, 15);
+        addFixedLabel("physical page:", 285, 135 + 25, 110, 15);
+        addFixedLabel("R:", 285, 150 + 25, 110, 15);
+        addFixedLabel("M:", 285, 165 + 25, 110, 15);
+        addFixedLabel("inMemTime:", 285, 180 + 25, 110, 15);
+        addFixedLabel("lastTouchTime:", 285, 195 + 25, 110, 15);
+        addFixedLabel("low:", 285, 210 + 25, 110, 15);
+        addFixedLabel("high:", 285, 225 + 25, 110, 15);
+
+        segmentLabel.setBounds(395, 240 + 25, 150, 15);
         segmentLabel.setFont(new Font("Courier", Font.BOLD, 14));
-        pageInputValueLabel = makeLabel("", 400, 315, 230, 15);
+        add(segmentLabel);
 
-        pagesLabel = makeLabel("", 400, 335, 230, 15);
+        pageInSegmentArea.setBounds(395, 260 + 25, 150, 90);
+        pageInSegmentArea.setFont(new Font("Courier", Font.PLAIN, 12));
+        pageInSegmentArea.setEditable(false);
+        pageInSegmentArea.setBackground(Color.white);
+        add(pageInSegmentArea);
 
-        add(makeLabel("status: ", 340, 10, 60, 15));
-        add(makeLabel("time: ", 340, 30, 60, 15));
-        add(makeLabel("instruction: ", 340, 60, 60, 15));
-        add(makeLabel("address: ", 340, 80, 60, 15));
-        add(makeLabel("page fault: ", 340, 110, 80, 15));
-        add(makeLabel("virtual page: ", 340, 130, 90, 15));
-        add(makeLabel("physical page: ", 340, 150, 90, 15));
-        add(makeLabel("R: ", 340, 170, 90, 15));
-        add(makeLabel("M: ", 340, 190, 90, 15));
-        add(makeLabel("inMemTime: ", 340, 210, 90, 15));
-        add(makeLabel("lastTouchTime: ", 340, 230, 90, 15));
-        add(makeLabel("low: ", 340, 250, 90, 15));
-        add(makeLabel("high: ", 340, 270, 90, 15));
-        add(makeLabel("Segmento:", 340, 295, 60, 18));
-        add(makeLabel("Pagina(s):", 340, 315, 60, 15));
+        Color[] segmentColors = {
+            new Color(255, 200, 200),
+            new Color(200, 255, 200),
+            new Color(200, 200, 255),
+            new Color(255, 255, 200),
+            new Color(200, 255, 255)
+        };
+
+        for (int i = 0; i < PAGE_COUNT; i++) {
+            int seg = findSegmentForPage(i);
+            Color c = (seg >= 0 && seg < segmentColors.length) ? segmentColors[seg] : Color.lightGray;
+            pageButtons[i].setBackground(c);
+        }
+
+        kernel.init(commands, config);
 
         show();
     }
 
-    private Button makeButton(String text, int x, int y, int w, int h, Color fg, Color bg) {
-        Button b = new Button(text);
-        b.setBounds(x, y, w, h);
-        b.setForeground(fg);
-        b.setBackground(bg);
+    private void configureControlButton(Button b, int x, int y) {
+        b.setForeground(Color.blue);
+        b.setBackground(Color.lightGray);
+        b.setBounds(x, y, 70, 15);
         add(b);
-        return b;
     }
 
-    private Label makeLabel(String text, int x, int y, int w, int h) {
+    private void addFixedLabel(String text, int x, int y, int w, int h) {
         Label l = new Label(text, Label.LEFT);
         l.setBounds(x, y, w, h);
         add(l);
-        return l;
     }
 
-    public void init(Kernel useKernel, String commands, String config) {
-        this.kernel = useKernel;
-        kernel.setControlPanel(this);
-        kernel.init(commands, config);
-        show();
+    private int findSegmentForPage(int pageNum) {
+        for (int s = 0; s < Kernel.SEGMENTS.length; s++) {
+            for (int p = 0; p < Kernel.SEGMENTS[s].length; p++) {
+                if (Kernel.SEGMENTS[s][p] == pageNum) return s;
+            }
+        }
+        return -1;
     }
 
     public void paintPage(Page page) {
@@ -145,6 +188,39 @@ public class ControlPanel extends Frame {
         lastTouchTimeValueLabel.setText(Integer.toString(page.lastTouchTime));
         lowValueLabel.setText(Long.toString(page.low, Kernel.addressradix));
         highValueLabel.setText(Long.toString(page.high, Kernel.addressradix));
+
+        int segnum = kernel.getSegmentForPage(page.id);
+        if (segnum != -1) {
+            segmentLabel.setText("Segmento: S" + (segnum + 1));
+        } else {
+            segmentLabel.setText("Sin segmento");
+        }
+
+        showPage(page.id);
+    }
+
+    public void paintPageOnly(Page page) {
+        if (page == null) return;
+        virtualPageValueLabel.setText(Integer.toString(page.id));
+        physicalPageValueLabel.setText(Integer.toString(page.physical));
+        RValueLabel.setText(Integer.toString(page.R));
+        MValueLabel.setText(Integer.toString(page.M));
+        inMemTimeValueLabel.setText(Integer.toString(page.inMemTime));
+        lastTouchTimeValueLabel.setText(Integer.toString(page.lastTouchTime));
+        lowValueLabel.setText(Long.toString(page.low, Kernel.addressradix));
+        highValueLabel.setText(Long.toString(page.high, Kernel.addressradix));
+
+        int segnum = kernel.getSegmentForPage(page.id);
+        if (segnum != -1) {
+            segmentLabel.setText("Segmento: S" + (segnum + 1));
+        } else {
+            segmentLabel.setText("Sin segmento");
+        }
+        // Do not change pageInSegmentArea here
+    }
+
+    public void setStatus(String status) {
+        statusValueLabel.setText(status);
     }
 
     public void addPhysicalPage(int pageNum, int physicalPage) {
@@ -155,45 +231,66 @@ public class ControlPanel extends Frame {
 
     public void removePhysicalPage(int physicalPage) {
         if (physicalPage >= 0 && physicalPage < physicalLabels.length) {
-            physicalLabels[physicalPage].setText("");
+            physicalLabels[physicalPage].setText(null);
         }
     }
 
-    public void setPagesInvolved(String s) {
-        if (pagesLabel != null) pagesLabel.setText(s);
+    public void showPagesInRange(int start, int end) {
+        if (start < 0 || end < start) {
+            pageInSegmentArea.setText("");
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int p = start; p <= end; p++) {
+            sb.append("pagina ").append(p);
+            if (p < end) sb.append(System.getProperty("line.separator"));
+        }
+        pageInSegmentArea.setText(sb.toString());
     }
 
-    public void setStatus(String s) {
-        if (statusValueLabel != null) statusValueLabel.setText(s);
+    public void showPage(int p) {
+        pageInSegmentArea.setText("Pagina: " + p);
+    }
+
+    public void clearPageList() {
+        pageInSegmentArea.setText("");
     }
 
     public boolean action(Event e, Object arg) {
-        if (e.target == runButton) {
+        Object target = e.target;
+
+        if (target == runButton) {
             setStatus("RUN");
-            runButton.setEnabled(false);
-            stepButton.setEnabled(false);
-            resetButton.setEnabled(false);
-            if (kernel != null) kernel.run();
+            runButton.disable();
+            stepButton.disable();
+            resetButton.disable();
+            try {
+                kernel.run();
+            } catch (Throwable t) { }
             setStatus("STOP");
-            resetButton.setEnabled(true);
+            resetButton.enable();
             return true;
-        } else if (e.target == stepButton) {
+        } else if (target == stepButton) {
             setStatus("STEP");
-            if (kernel != null) kernel.step();
+            kernel.step();
+            if (kernel.runcycles == kernel.runs) {
+                stepButton.disable();
+                runButton.disable();
+            }
             setStatus("STOP");
             return true;
-        } else if (e.target == resetButton) {
-            if (kernel != null) kernel.reset();
-            runButton.setEnabled(true);
-            stepButton.setEnabled(true);
+        } else if (target == resetButton) {
+            kernel.reset();
+            runButton.enable();
+            stepButton.enable();
             return true;
-        } else if (e.target == exitButton) {
+        } else if (target == exitButton) {
             System.exit(0);
             return true;
         } else {
             for (int i = 0; i < pageButtons.length; i++) {
-                if (e.target == pageButtons[i]) {
-                    if (kernel != null) kernel.getPage(i);
+                if (target == pageButtons[i]) {
+                    kernel.getPage(i);
                     return true;
                 }
             }
